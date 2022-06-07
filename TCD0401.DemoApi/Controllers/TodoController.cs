@@ -1,39 +1,39 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Mvc;
 
-using System.Linq;
 using System.Threading.Tasks;
 
 using TCD0401.DemoApi.Data;
 using TCD0401.DemoApi.Models;
+using TCD0401.DemoApi.Repositories.Interfaces;
+using TCD0401.DemoApi.Services.IServices;
 
 namespace TCD0401.DemoApi.Controllers
 {
-  [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
   [Route("api/[controller]")]
   [ApiController]
   public class TodoController : ControllerBase
   {
-    private readonly ApiDbContext _context;
+    private ITodoRepository _todoRepos;
+    private ICalculator _calculator;
 
-    public TodoController(ApiDbContext context)
+    public TodoController(ApiDbContext context, ITodoRepository todoRepository, ICalculator calculator)
     {
-      _context = context;
+      _todoRepos = todoRepository;
+      _calculator = calculator;
     }
 
     [HttpGet]
-    public ActionResult GetItems()
+    public async Task<ActionResult> GetItems()
     {
-      var items = _context.Items.ToList();
+      var result = _calculator.Add(1, 2);
+      var items = await _todoRepos.GetAll();
       return Ok(items);
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetItem(int id)
     {
-      var item = await _context.Items.FirstOrDefaultAsync(z => z.Id == id);
+      var item = await _todoRepos.GetById(id);
 
       if (item == null)
         return NotFound();
@@ -46,8 +46,7 @@ namespace TCD0401.DemoApi.Controllers
     {
       if (ModelState.IsValid)
       {
-        await _context.Items.AddAsync(data);
-        await _context.SaveChangesAsync();
+        await _todoRepos.Create(data);
 
         return CreatedAtAction("GetItem", new { data.Id }, data);
       }
@@ -62,7 +61,7 @@ namespace TCD0401.DemoApi.Controllers
       if (id != item.Id)
         return BadRequest();
 
-      var existItem = await _context.Items.FirstOrDefaultAsync(z => z.Id == id);
+      var existItem = await _todoRepos.GetById(id);
 
       if (existItem == null)
         return NotFound();
@@ -70,7 +69,7 @@ namespace TCD0401.DemoApi.Controllers
       existItem.Title = item.Title;
       existItem.Details = item.Details;
 
-      await _context.SaveChangesAsync();
+      await _todoRepos.Save();
 
       // Following up the REST standart on update we need to return NoContent
       return NoContent();
@@ -79,13 +78,12 @@ namespace TCD0401.DemoApi.Controllers
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteItem(int id)
     {
-      var existItem = await _context.Items.FirstOrDefaultAsync(z => z.Id == id);
+      var existItem = await _todoRepos.GetById(id);
 
       if (existItem == null)
         return NotFound();
 
-      _context.Items.Remove(existItem);
-      await _context.SaveChangesAsync();
+      await _todoRepos.Delete(existItem);
 
       return Ok(existItem);
     }

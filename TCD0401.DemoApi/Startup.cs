@@ -13,6 +13,10 @@ using System.Text;
 
 using TCD0401.DemoApi.Configuration;
 using TCD0401.DemoApi.Data;
+using TCD0401.DemoApi.Repositories;
+using TCD0401.DemoApi.Repositories.Interfaces;
+using TCD0401.DemoApi.Services;
+using TCD0401.DemoApi.Services.IServices;
 
 namespace TCD0401.DemoApi
 {
@@ -61,8 +65,12 @@ namespace TCD0401.DemoApi
         };
       });
 
+
       services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
                       .AddEntityFrameworkStores<ApiDbContext>();
+      // Add Repository Services
+      services.AddScoped<ITodoRepository, TodoRepository>();
+      services.AddScoped<ICalculator, Calculator>();
 
     }
 
